@@ -4,12 +4,18 @@ import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Objects;
 
 // Press ⇧ twice to open the Search Everywhere dialog and type `show whitespaces`,
 // then press Enter. You can now see whitespace characters in your code.
 public class Main {
     static boolean hadError = false;
+
+    static boolean hadRuntimeError = false;
+    private static final Interpreter interpreter = new Interpreter();
+
+
     public static void main(String[] args) throws IOException {
         if (args.length > 1) {
             System.out.println("usage: jlox <script>");
@@ -18,7 +24,8 @@ public class Main {
 
         if (args.length == 1) {
             run(Files.readString(Paths.get(args[0]), Charset.defaultCharset()));
-            System.exit(hadError ? 65 : 0);
+            if (hadError) System.exit(65);
+            if (hadRuntimeError) System.exit(70);
         }
 
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
@@ -33,22 +40,20 @@ public class Main {
 
     private static void run(String source) {
         Parser parser = new Parser(new Lexer(source).lex());
-        Expression expression = parser.parse();
+        List<Stmt> statements = parser.parse();
+        interpreter.interpret(statements);
 
         // Stop if there was a syntax error.
         if (hadError) return;
-
-        System.out.println(new ASTPrinter().print(expression));
+        if (hadRuntimeError) System.exit(70);
     }
 
     static void error(int line, String message) {
         report(line, "", message);
     }
 
-    private static void report(int line, String where,
-                               String message) {
-        System.err.println(
-                "[line " + line + "] Error" + where + ": " + message);
+    private static void report(int line, String where, String message) {
+        System.err.println("[line " + line + "] Error" + where + ": " + message);
         hadError = true;
     }
 
@@ -58,5 +63,10 @@ public class Main {
         } else {
             report(token.line, " at '" + token.lexeme + "'", message);
         }
+    }
+
+    static void runtimeError(RuntimeError error) {
+        System.err.println(error.getMessage() + "\n[line " + error.token.line + "]");
+        hadRuntimeError = true;
     }
 }
