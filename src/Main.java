@@ -41,10 +41,15 @@ public class Main {
     private static void run(String source) {
         Parser parser = new Parser(new Lexer(source).lex());
         List<Stmt> statements = parser.parse();
-        interpreter.interpret(statements);
+
+        Resolver resolver = new Resolver(interpreter);
+        resolver.resolve(statements);
 
         // Stop if there was a syntax error.
         if (hadError) return;
+
+        interpreter.interpret(statements);
+
         if (hadRuntimeError) System.exit(70);
     }
 
